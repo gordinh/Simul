@@ -1,0 +1,39 @@
+{
+  "name": "Simul",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "8.12"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@google-cloud/datastore": "^2.0.0",
+    "async": "^2.1.4",
+    "dotenv": "^4.0.0",
+    "express": "^4.16.4",
+    "faker": "^4.1.0",
+    "firebase-admin": "^4.2.1",
+    "google-auth-library": "^0.10.0",
+    "joi": "^8.1.0",
+    "mongodb": "^2.2.20",
+    "morgan": "^1.7.0",
+    "node-schedule": "^1.2.0",
+    "node-uuid": "^1.4.8",
+    "raven": "^0.12.1",
+    "request": "^2.79.0",
+    "require-dir": "^0.3.0",
+    "restify": "^4.0.4",
+    "restify-oauth2": "^4.0.4"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^2.4.5",
+    "nodemon": "^1.11.0",
+    "supertest": "^1.2.0"
+  }
+}
