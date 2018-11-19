@@ -1,30 +1,80 @@
-// Load environment variables when NODE_ENV is local
-process.env.GOOGLE_CLIENT_ID = '128954003662-jfdr1qs8c1gledo2lbgae5v191romjuj.apps.googleusercontent.com';
+// Copyright 2017, Google, Inc.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-var restify = require('restify');
-var logger = require('morgan');
-var requireDir = require('require-dir');
+'use strict';
 
-var middlewares = requireDir('middlewares');
-var controllers = requireDir('controllers');
-var app = restify.createServer();
+const express = require('express');
+const bodyParser = require('body-parser');
+const simulate = require('./utils/sensor');
+const _ = require('lodash');
+const async = require('async');
 
-app.pre(restify.pre.sanitizePath());
-app.on('uncaughtException', middlewares.raven.uncaught());
-app.on('MethodNotAllowed', middlewares.cors.MethodNotAllowed());
-app.use(logger('dev')); // Logs http requests on terminal
-app.use(middlewares.cors.request());
-app.use(restify.authorizationParser());
-app.use(restify.bodyParser({keepExtensions: true})); // Inject x-www-form-urlencoded request variables to req.params
-app.use(restify.queryParser()); // Allows use of req.query
-app.use(middlewares.requestValidator.inject()); // Inject valitator
+const router = express.Router();
 
-middlewares.oauth2(app);
+// Automatically parse request body as JSON
+router.use(bodyParser.json());
 
-app.use(middlewares.paramInjector.inject());
+/**
+ * GET /api/books
+ *
+ * Retrieve a page of books (up to ten at a time).
+ */
+router.get('/', (req, res, next) => {
+  let triggered = {};
+  async.waterfall([
+    function(cb) {
+      cb(null, req.events, req.sensors);
+    }, function(events, sensors, cb) {
+      _.map(events, e => { simulate.setEvent(e); });
+      cb(null, sensors);
+    }, function(sensors, cb) {
+      _.map(sensors, s => { simulate.setSensor(s); });
+      cb(null);
+    }
+  ], function (err) {
+    if (err) return err.message;
+    triggered = simulate.triggerSensor();
+  });
 
-app.use(middlewares.auth);
-require('./routes')(app, controllers, middlewares);
-cron.start();
+  res.json({ triggered: triggered });
+});
 
-module.exports = app;
+/**
+ * POST /api/books
+ *
+ * Create a new book.
+ */
+router.post('/', (req, res, next) => {
+  getModel().create(req.body, (err, entity) => {
+    if (err) {
+      next(err);
+      return;
+    }
+    res.json(entity);
+  });
+});
+
+/**
+ * Errors on "/api/books/*" routes.
+ */
+router.use((err, req, res, next) => {
+  // Format error and forward to generic error handler for logging and
+  // responding to the request
+  err.response = {
+    message: err.message,
+    internalCode: err.code
+  };
+  next(err);
+});
+
+module.exports = router;
